@@ -1,13 +1,13 @@
-from django.shortcuts import render
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets, mixins
 from rest_framework.authtoken.models import Token
 from .serializers import UserRegistration, PersonListSerializer, PersonSerializer
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from .models import Person
 from django.contrib.auth.models import User
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.pagination import PageNumberPagination
 
 
 class IsSuperUser(IsAdminUser):
@@ -21,12 +21,10 @@ def api_overview(request):
         'Person List': 'person_list/',
         'Signup': 'signup/',
         'Log In': 'login/',
-        'Filter by Last Name': '',
-        'Filter by First Name': '',
-        'Filter by Age': '',
-        'Add a Person (Admin Only)': '/create',
-        'Update a Person (Admin Only)': '/update/pk',
-        'Delete a Person (Admin Only)': '/person/pk/delete'
+        'Filter by First Name': 'person_list/?first_name=<value>',
+        'Filter by Last Name': 'person_list/?last_name=<value>',
+        'Filter by Age': 'person_list/?age=<value>',
+        'CRUD (Admin Only)': 'crud/',
     }
  
     return Response(api_urls)
@@ -44,9 +42,7 @@ def user_signup_view(request):
 
             data['response'] = 'User has been created'
             data['username'] = user.username
-
-            token = Token.objects.get(user=user).key
-            data['token'] = token
+            
         
         else:
             data = serializers.errors
@@ -67,40 +63,24 @@ def login_view(request):
         return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@api_view(['POST'])
-@permission_classes([IsSuperUser])
-def create_person(request, format=None):
-    person = PersonSerializer(data=request.data)
+class PersonPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
-    if Person.objects.filter(**request.data).exists():
-        raise serializers.ValidationError('This data already exists')
+
+class PersonCrudView(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    permission_classes = [IsSuperUser]
+    queryset = Person.objects.all()
+    serializer_class = PersonSerializer
+    pagination_class = PersonPagination
     
-    if person.is_valid():
-         person.user = User
-         person.save()
-         return Response(person.data)
-    else:
-        return Response(status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['GET','POST'])
-@permission_classes([IsSuperUser])
-def update_person(request, pk):
-    person = Person.objects.get(pk=pk)
-    data = PersonSerializer(instance=person, data=request.data)
- 
-    if data.is_valid():
-        data.save()
-        return Response(data.data)
-    else:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+class PersonListView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Person.objects.all()
+    serializer_class = PersonListSerializer
 
-
-@api_view(['DELETE'])
-@permission_classes([IsSuperUser])
-def delete_person(request, pk):
-    person = get_object_or_404(Person, pk=pk)
-    person.delete()
-    return Response(status=status.HTTP_202_ACCEPTED)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

@@ -1,13 +1,16 @@
-from django.urls import path
-from rest_framework.authtoken.views import obtain_auth_token
+from django.urls import path, include
+from rest_framework import routers
 from . import views
+from api.views import PersonCrudView, PersonListView
+router = routers.DefaultRouter()
+router.register(r'persons/crud', PersonCrudView),
+router.register(r'persons', PersonListView),
 
 urlpatterns = [
     path('', views.api_overview, name='home'),
+    path('', include(router.urls)),
     path('signup/', views.user_signup_view, name='signup'),
     path('login/',views.login_view, name='login'),
-    path('create/', views.create_person, name='create_person'),
-    path('update/<int:pk>/', views.update_person, name='update_person'),
-    path('person/<int:pk>/delete/', views.delete_person, name='delete_person'),
+    path('logout/',views.logout, name='logout'),
     path('person_list/', views.person_list, name='person_list'),
 ]
