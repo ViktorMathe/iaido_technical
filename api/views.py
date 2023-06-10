@@ -74,12 +74,6 @@ class PersonCrudView(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Cr
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
     pagination_class = PersonPagination
-    
-
-class PersonListView(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated]
-    queryset = Person.objects.all()
-    serializer_class = PersonListSerializer
 
 
 @api_view(['GET'])

@@ -1,10 +1,9 @@
 from django.urls import path, include
 from rest_framework import routers
 from . import views
-from api.views import PersonCrudView, PersonListView
+from api.views import PersonCrudView
 router = routers.DefaultRouter()
 router.register(r'persons/crud', PersonCrudView),
-router.register(r'persons', PersonListView),
 
 urlpatterns = [
     path('', views.api_overview, name='home'),
